@@ -8,8 +8,12 @@ pub fn build(b: *std.Build) void {
     exe_client.addCSourceFile(.{
         .file = b.path("./shm_open.c"),
     });
+    exe_client.addCSourceFile(.{
+        .file = b.path("./xdg-shell-protocol.c"),
+    });
     exe_client.linkSystemLibrary("c");
     exe_client.linkSystemLibrary("wayland-client");
+    // exe_client.linkSystemLibrary("rt");
     exe_client.root_module.addIncludePath(b.path("."));
 
     exe_server.linkSystemLibrary("c");
