@@ -21,7 +21,7 @@ fn opaqPtrTo(comptime T: type, ptr: ?*anyopaque) T {
     return @ptrCast(@alignCast(ptr));
 }
 
-fn randname(buf: *[6]u8) void {
+fn randname(buf: *[]u8) void {
     var ts: c.struct_timespec = undefined;
     const res = c.clock_gettime(c.CLOCK_REALTIME, &ts);
     if (res != 0) {
@@ -35,9 +35,19 @@ fn randname(buf: *[6]u8) void {
         r >>= 5;
     }
 }
+
+fn create_shm_file() i16 {
+    for (0..100) |_| {
+        var name = []u8"/wl_shm-XXXXXX".*;
+        var slice = name[8..];
+        randname(&slice);
+        std.log.info("randname = {s}", .{name});
+        break;
+    }
+    return 0;
+}
+
 pub fn main() !void {
     std.log.info("Hello from client", .{});
-    var buf: [6]u8 = undefined;
-    randname(&buf);
-    std.log.info("randname = {s}", .{buf});
+    _ = create_shm_file();
 }
