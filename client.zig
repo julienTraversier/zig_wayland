@@ -1,45 +1,43 @@
 const std = @import("std");
 const wc = @cImport({
     @cInclude("wayland-client.h");
-    @cInclude("shm_open.h");
+    // @cInclude("shm_open.h");
+});
+const xdg = @cImport({
+    @cInclude("xdg-shell-client-protocol.h");
+});
+const c = @cImport({
+    @cInclude("errno.h");
+    @cInclude("fcntl.h");
+    @cInclude("limits.h");
+    @cInclude("stdbool.h");
+    @cInclude("string.h");
+    @cInclude("sys/mman.h");
+    @cInclude("time.h");
+    @cInclude("unistd.h");
 });
 
 fn opaqPtrTo(comptime T: type, ptr: ?*anyopaque) T {
     return @ptrCast(@alignCast(ptr));
 }
 
-const our_state = struct {
-    compositor: ?*wc.struct_wl_compositor,
-    wl_shm: ?*wc.struct_wl_shm,
-    fn new() our_state {
-        return our_state{ .compositor = null, .wl_shm = null };
+fn randname(buf: *[6]u8) void {
+    var ts: c.struct_timespec = undefined;
+    const res = c.clock_gettime(c.CLOCK_REALTIME, &ts);
+    if (res != 0) {
+        return;
     }
-};
-
-fn registry_handle_global(data: ?*anyopaque, registry: ?*wc.struct_wl_registry, name: u32, interface: [*c]const u8, version: u32) callconv(.C) void {
-    _ = version; // autofix
-    // std.log.info("interface {s} version {d} ,name {d}\n", .{ interface, version, name });
-    // var state = @as(*our_state, @alignCast(@ptrCast(data)));
-    var state = opaqPtrTo(*our_state, data);
-    if (interface == wc.wl_compositor_interface.name) {
-        state.compositor = opaqPtrTo(*wc.struct_wl_compositor, wc.wl_registry_bind(registry, name, &wc.wl_compositor_interface, 4));
-        state.wl_shm = opaqPtrTo(*wc.struct_wl_shm, wc.wl_registry_bind(registry, name, &wc.wl_shm_interface, 1));
+    var r: u64 = @bitCast(ts.tv_nsec);
+    for (0..buf.len) |i| {
+        //had to cast r to u8 for u64
+        const temp: u8 = @truncate(r);
+        buf[i] = 'A' + (temp & 15) + (temp & 16) * 2;
+        r >>= 5;
     }
 }
-fn registry_handle_global_remove(data: ?*anyopaque, registry: ?*wc.struct_wl_registry, name: u32) callconv(.C) void {
-    _ = name; // autofix
-    _ = registry; // autofix
-    _ = data; // autofix
-    //left blank
-}
-const registry_listener = wc.struct_wl_registry_listener{ .global = registry_handle_global, .global_remove = registry_handle_global_remove };
-
-pub fn main() anyerror!void {
+pub fn main() !void {
     std.log.info("Hello from client", .{});
-    const display = wc.wl_display_connect(null);
-    const registry = wc.wl_display_get_registry(display) orelse return;
-    var state: our_state = our_state.new();
-    _ = wc.wl_registry_add_listener(registry, &registry_listener, &state);
-    _ = wc.wl_display_roundtrip(display);
-    // const surface = wc.wl_compositor_create_surface(state.compositor);
+    var buf: [6]u8 = undefined;
+    randname(&buf);
+    std.log.info("randname = {s}", .{buf});
 }
